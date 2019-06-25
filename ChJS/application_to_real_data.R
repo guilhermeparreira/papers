@@ -1,212 +1,179 @@
-#Testando opcoes graficas####
 require(Hmisc)
-require(lattice)
-require(qcc)
 
-# Importando os dados ####
-setwd("/home/guilherme/Google Drive/TCC/Simulacao")
-data <- read.delim("concrete.txt", dec=".")
-str(data)
+# Importing data ###
+# setwd("/home/guilherme/Google Drive/TCC/Simulacao")
+setwd("/home/guilherme/Google Drive/TCC/ChJS")
+data <- read.delim("/home/guilherme/Google Drive/TCC/Simulacao/concrete.txt", dec=".") # Available at http://archive.ics.uci.edu/ml/datasets/concrete+compressive+strength
 names(data)[1] <- c("cement")
 names(data)[9] <- c("concrete")
 data <- data[,c(1,9)]
-attach(data)
-# Tabela Descritiva ####
-a <- rbind(cbind(min(cement), min(concrete)),
-           cbind(mean(cement), mean(concrete)),
-           cbind(median(cement), median(concrete)),
-           cbind(max(cement), max(concrete)),
-           cbind(sd(cement), sd(concrete)),
-           cor(cement,concrete))
+data$concrete <- sqrt(data$concrete)
+# Descriptive Table ####
+a <- with(data, rbind(cbind(min(cement), min(concrete)),
+                      cbind(mean(cement), mean(concrete)),
+                      cbind(median(cement), median(concrete)),
+                      cbind(max(cement), max(concrete)),
+                      cbind(sd(cement), sd(concrete)),
+                      cor(cement,concrete)))
 a <- round(a,2)
 a <- as.data.frame(a)
 a[6,2] <- ""
-shapiro.test(concrete)
-latex(a, file  = "", 
-      booktabs = TRUE,
-      title    = "Medidas descritivas",
-      rowname  = c("Mínimo","Média","Mediana","Máximo","Desvio padrão","Coeficiente de Correlação"),
-      where    = "H",
-      colheads = c("Cimento", "Concreto"), 
-      digits   = 2,
-      caption  = "Medidas resumo para os Domínios do SF36",
-      label    = "tab:descritivo"
-)
-x11()
-#Gráficos ####
-# Primeiro o Histograma
-par(mfrow=c(1,2))
-hist(concrete, freq=F
-     ,main = "Histograma para a variável resistência de concreto"
-     ,xlab = "Resistência de concreto(MPa)"
-     ,ylab = "Densidade"
+# Not used in the article ####
+# shapiro.test(concrete)
+# latex(a, file  = "", 
+#       booktabs = TRUE,
+#       title    = "Medidas descritivas",
+#       rowname  = c("Mínimo","Média","Mediana","Máximo","Desvio padrão","Coeficiente de Correlação"),
+#       where    = "H",
+#       colheads = c("Cimento", "Concreto"), 
+#       digits   = 2,
+#       caption  = "Medidas resumo para os Domínios do SF36",
+#       label    = "tab:descritivo"
+# )
+# x11()
+# Hist + density ####
+setEPS()
+postscript("descritivo.eps",width=16)
+par(mfrow=c(1,2), mar = c(5, 5, 4, 0.5))
+hist(data$concrete, freq=F
+     ,xlab = expression(sqrt("Concrete strength (MPa)"))
+     ,ylab = "Density"
      ,cex.lab = 1.4
      ,cex.axis = 1
      ,las = 1
+     ,main=""
+     ,breaks = 10
+     ,ylim = c(0,0.3)
 )
 box()
-rug(concrete)
-lines(density(concrete),col = "darkblue", lwd = 2)
-curve(dnorm(x,mean(concrete),sd(concrete)), from = -10, to = 100, col="red", add=T, lwd = 2)
-legend(103,0.025
-       , title = "Ajuste"
-       , legend = c("Não Paramétrico", "Paramétrico")
-       , border = "n", col=c("darkblue","red")
-       , lty = 1, lwd = 2, bty="n"
+rug(data$concrete)
+lines(density(data$concrete), lty = 1, lwd = 2)
+curve(dnorm(x,mean(data$concrete),sd(data$concrete)), from = 0, to = 10, lty=2, add=T, lwd = 2)
+legend(80,0.025
+       , title = "Adjust"
+       , legend = c("Nonparametric", "Parametric")
+       , border = "n", col="black"
+       , lty = c(1,2), lwd = 2, bty="n"
        , xjust = 1
 )
-# Gráfico de correlação
-plot(concrete~cement, data=data
+# Scatterplot ####
+plot(data$concrete~data$cement, data=data
      , las = 1
      , cex = 1
-     , col = "blue"
-     , xlab = "Quantidade de cimento(kg)"
-     , ylab = "Resistência de concreto(MPa)"
-     , main = "Gráfico de dispersão para as variáveis concreto e cimento"
+     , col = "black"
+     , xlab = "Quantity of cement(kg)"
+     , ylab = expression(sqrt("Concrete strength (MPa)"))
      , cex.lab = 1.5)
-abline(coefficients(lm(concrete~cement)), col="darkorange", lwd=2)
-loess_fit_pre <- predict(loess(concrete~cement))
-lines(cement[order(cement)], loess_fit_pre[order(loess_fit_pre)], lwd = 2, col = "slategray4", type="l")
+abline(coefficients(lm(data$concrete~data$cement)), lty=3, lwd=2)
+loess_fit_pre <- predict(loess(data$concrete~data$cement))
+lines(data$cement[order(data$cement)], loess_fit_pre[order(loess_fit_pre)], lwd = 2, lty = 7, type="l")
 
-legend(80,85, legend = c("Não-Paramétrica", "Paramétrica")
-       , border = "n", col=c("slategray4","darkorange")
-       , lty = 1, lwd = 2, bty="n"
+legend(80,85, legend = c("Nonparametric","Parametric")
+       , border = "n", col="black"
+       , lty = c(7,3), lwd = 2, bty="n"
        , xjust = 0
-       , title = "Regressão")
-detach(data)
-# Dados teste ####
-data(pistonrings)
-attach(pistonrings)
-par(bg = 'white')
-q1 <- qcc(pistonrings[1:100,1], type="b", col="blue", main=paste("Gráficos de controle para a média via",method, ",k=",k, "delta=",delta))
-abline(h=60)
-text(1,50,"1sig")
-par(mfrow=c(3,1))
-q1<-qcc(pistonrings[1:100,1]
-        ,chart.all = F
-        ,text=" "
-        , type="xbar.one"
-        ,add.stats=F
-        ,par.restore=F
-        ,title=""
-)
-x11()
-oldpar <- par(no.readonly = TRUE)
-par(mfrow=c(2,1))
-plot(q1,chart.all = F
-     ,text=" "
-     , type="xbar.one"
-     ,add.stats=F
-     ,par.restore=F
-     ,title="")
-par(oldpar)
-
-par(bg="white")
-oldpar <- par(no.readonly = TRUE)
-par(mfrow=c(3,1), mar=c(0,0.1,0,0.1), oma=c(0, 1, 0, 1),
-    mai = c(0,0,0,0))
-
-#c(bottom, left, top, right)
-#oma é o de fora, mai o de dentro
-
-plot(pistonrings[1:100,1], title="First samples", add.stats=FALSE, restore.par=FALSE, ylab="", xaxt=NULL, xaxt="n")
-par(mfrow=c(1,1))
-mtext(expression(paste(2, hat(sigma)[bar(X)])), at=74, side=4,line=0.2, adj=0, las=1)
-
-?par
-
-
-plot(q1, title="Second samples", add.stats=FALSE, restore.par=FALSE, ylab="", xlab=NULL, xaxt="n")
-plot(q3, title="Second samples", add.stats=FALSE, restore.par=FALSE, ylab="", xlab=NULL)
-?par
-par(oldpar)
-mar
-(bottom, left, top, right)
-
-
-mtext("Amostras para estimar os LIC e LSC",side=1,line=0, adj=0)
-mtext("Amostras para monitorar o processo",side=1,line=0, adj=1)
-mtext("Identificação da amostra",side=1, line=1)
-
-mtext("Amostras para estimar os LIC e LSC",side=3,line=-1.8, adj=0)
-mtext("Amostras para monitorar o processo",side=3,line=-1.8, adj=1)
-
-par(mfrow=c(3,1), mai= c(0.2, 1, 0.4, 1), oma=c(1.4, 1, 1, 1))
-c(bottom, left, top, right)
-par(bg="white")  
-method <- "AAS"
-delta <- 0.4
-k <- 3
-
-sl <- 25
-k <- 3
-snl <- 75
-A <- 3
-method <- "AAS"
-desc <- T
-delta <- 0.4
-mu0 <- 35.8
-sig0 <- 16.7
-pert <- 2
-dados <- pistonrings[1:100,1]
-lsc <- 74.03
-lic <- 73.97
-lsc1 <- 74.02
-lic1 <- 74.00
-lsc2 <- 74.01
-lic2 <- 74.005
-lc <- 76
-# Processos de seleção de amostras da URSS e ACO ####
-urss_process <- function(data, l, k2){
-  dx <- matrix(data[,1], ncol=k2)
+       , title = "Regression")
+dev.off()
+# Selecting a sample from NRSS and RSS ####
+select <- function(aas){
+  # Input:
+  # Data from a SRS of size k
+  # Description:
+  # Select function return the position of the elements to be drawn from a SRS
+  len <- length(aas)
+  k <- sqrt(len)
+  aas <- sort(aas)
+  elementos <- rep(0,ncol=k)
+  posicao <- rep(0,k)
+  i <- 1
+  if (len%%2 == 0){
+    for(i in 1:k){
+      if (i%%2 == 0){l  <- k/2}
+      else{l <-  (k+2)/2 }
+      posicao[i] <- (l+(i-1)*k)
+      elementos[i] <- aas[posicao[i]]
+    }
+  }
+  else{  
+    for(i in 1:k){
+      posicao[i] <- ((k+1)/2)+(i-1)*k
+      elementos[i] <- aas[posicao[i]]
+    }
+  }
+  return(posicao)
+}
+# Input for testing new code!!!!
+# k2 <- 9        ## Tamanho da amostra inicial de um delineamento que fazem uso de ranqueamento
+# l <- 25
+# data <- data[1:100, ]
+urss_process <- function(data, l, k2, po = T){
   dy <- matrix(data[,2], ncol=k2)
   
-  pos <- t(apply(dx,1,order))                # Posição dos elementos da matriz x (var. auxiliar)
-  dys <- matrix(rep(0,l*k2),ncol=k2)         # Matriz vazia para receber as amostras ordenadas
-  for (linha in 1:nrow(dy)){                 # Ordena a matriz y por x
-    dys[linha,] <- dy[linha,pos[linha,]]
+  if (po){ #Perfect Ordering
+    dys <- t(apply(dy, 1, sort))
+  } else{  #Imperfect Ordering
+    dx <- matrix(data[,1], ncol=k2)
+    dys <- matrix(rep(0,l*k2),ncol=k2)
+    pos <- t(apply(dx,1,order))         # Every line is a sample
+    for (linha in 1:nrow(dy)){                 # Order y by x
+      dys[linha,] <- dy[linha,pos[linha,]]
+    }
   }
-  dys_amostras <- dys[,select(1:k2)]                    # Matriz ordenada com as observações necessárias
+  dys_amostras <- dys[,select(1:k2)]         
   return(dys_amostras)
 }
-aco_process <- function(base, m, n){
-  
+#Input for testing
+# m <- 1
+# n <- 9
+aco_process <- function(data, m, n, po = T){
+  # data <- samples
+  # m <- sl
+  # k <- n
   # -----------------------------------------------------------------------
-  # separando os dados em duas matrizes
+  # Split the data into two matrices
   # -----------------------------------------------------------------------
-  x <- matrix(base[,1], n, m*n) # primeiro vetor
-  y <- matrix(base[,2], n, m*n) # segundo vetor
   
-  # indices da ordem da amostra x
-  i <- apply(x,2,order, decreasing=F)
+  x <- matrix(data[,1], n, m*n) # 
+  y <- matrix(data[,2], n, m*n) # For k = 3, m*n = 75 and n = 3
+  # dim(y)
+  if (po){
+    y.order <- apply(y, 2, sort)
+    # dim(y.order)
+    amostra.sel <- matrix(y.order[cbind(rep(1:n, 25), 1:(m*n))], byrow = T, nrow = m)
+    
+  } else{
+    # Indices of the order of matrix x
+    i <- apply(x,2,order, decreasing=F)
+    
+    # Crete indices to order y elements by x
+    l <- i[1:nrow(data)]
+    c <- rep(1:(n*m),each=n)
+    
+    y.order <- matrix(y[cbind(l,c)], n, n*m)
+    
+    # -----------------------------------------------------------------------
+    # select only the diagonals
+    # -----------------------------------------------------------------------
+    ll <- rep(sequence(nrow(x)), m) # line
+    cc <- rep(sequence(ncol(x))) # col
+    
+    #  diagonal
+    amostra.sel <- matrix(y.order[cbind(ll,cc)], ncol = n, byrow = TRUE)
+  }
   
-  # criando indices para ordenar os elementos de y com base em x
-  l <- i[1:nrow(base)]
-  c <- rep(1:(n*m),each=n)
-  
-  y.order <- matrix(y[cbind(l,c)], n, n*m)
-  
-  # -----------------------------------------------------------------------
-  # selecao das diagonais
-  # -----------------------------------------------------------------------
-  ll <- rep(sequence(nrow(x)), m) # linha selecionada
-  cc <- rep(sequence(ncol(x))) # coluna selecionada
-  
-  # selecao do elementos na diagonal
-  amostra.sel <- matrix(y.order[cbind(ll,cc)], ncol = n, byrow = TRUE)
   return(amostra.sel)
 }
-#Função para plotar o gráfico com legendas e tudo mais ####
-plot_grafico <- function(k, delta, method, lc, lsc, lic, lsc1, lic1, lsc2, lic2, sl, dados, cor, cex){
+# Function to plot the control charts ####
+plot_grafico <- function(k, delta, method, lc, lsc, lic, lsc1, lic1, lsc2, lic2, sl, dados, cor, cex, pch.forma, po){
   plot(dados
        , type ="b"
        , col  = cor
        , main =""
        , xlab =""
        , ylab = ""
-       , ylim = c(lic-13, lsc+13)
+       , ylim = c(lic-0.2, lsc+1)
        , las  = 1
-       , pch  = 16
+       , pch  = pch.forma
        , xaxt = "n"
        , cex = cex
        , cex.axis = cex/1.25
@@ -216,55 +183,55 @@ plot_grafico <- function(k, delta, method, lc, lsc, lic, lsc1, lic1, lsc2, lic2,
   #Divisão de amostras
   abline(v=sl, lty = "dotted")
   #Method
-  text(31,lsc+10,method, cex = cex, font = 2)
+  text(31,lsc+0.5,paste0(method, ifelse(method == "SRS", "", ifelse(po, "-PR", "-IR"))), cex = cex, font = 2)
   ## Cima
   #LSC
-  abline(h=lsc, col = "red", lty="longdash", lwd = cex*1.25)
-  mtext("LSC", at=lsc, side=4,line=0.2, adj=0, las=1, cex = cex/1.1)
+  abline(h=lsc, col = "black", lty="longdash", lwd = cex*1.25)
+  mtext("UCL", at=lsc, side=4,line=0.2, adj=0, las=1, cex = cex/1.6)
   #2sigma
   abline(h=lsc2, col = "black", lty ="dashed", lwd = cex)
   mtext(substitute(paste(2, hat(sigma)[bar(X)[method]])
                    , list(method = method))
-        , at=lsc2, side=4,line=0.2, adj=0, las=1, cex = cex/1.25)
+        , at=lsc2, side=4,line=0.2, adj=0, las=1, cex = cex/1.2)
   #1sigma
-  abline(h=lsc1, col = "grey", lty ="twodash", lwd = 1.75)
+  abline(h=lsc1, col = "black", lty ="twodash", lwd = 1.75)
   mtext(substitute(paste(1, hat(sigma)[bar(X)[method]])
                    , list(method = method))
-        , at=lsc1, side=4,line=0.2, adj=0, las=1, ann=F, cex = cex/1.25)
+        , at=lsc1, side=4,line=0.2, adj=0, las=1, ann=F, cex = cex/1.2)
   #Central
   abline(h=lc)
-  mtext("LC", at=lc, side=4,line=0.2, adj=0, las=1, cex = cex/1.1)
+  mtext("CL", at=lc, side=4,line=0.2, adj=0, las=1, cex = cex/1.6)
   ## Baixo
-  #LIC
-  abline(h=lic, col = "red", lty="longdash", lwd = cex*1.25)
-  mtext("LIC", at=lic, side=4,line=0.2, adj=0, las=1, outer=F, cex = cex/1.1)
+  #LCL
+  abline(h=lic, col = "black", lty="longdash", lwd = cex*1.25)
+  mtext("LCL", at=lic, side=4,line=0.2, adj=0, las=1, outer=F, cex = cex/1.6)
   #2sigma
   abline(h=lic2, col = "black", lty ="dashed", lwd = cex)
   mtext(substitute(paste(2, hat(sigma)[bar(X)[method]])
                    , list(method=method))
-        , at=lic2, side=4,line=0.2, adj=0, las=1, cex = cex/1.25)
+        , at=lic2, side=4,line=0.2, adj=0, las=1, cex = cex/1.2)
   #1sigma
-  abline(h=lic1, col = "grey", lty ="twodash", lwd = 1.75)
+  abline(h=lic1, col = "black", lty ="twodash", lwd = 1.75)
   mtext(substitute(paste(1, hat(sigma)[bar(X)[method]])
                    , list(method=method))
-        , at=lic1, side=4,line=0.2, adj=0, las=1, cex = cex/1.25)
+        , at=lic1, side=4,line=0.2, adj=0, las=1, cex = cex/1.2)
 }
 # Função que engloba tudo ####
-graficos_controle <- function(data, sl, k, method, snl, A, desc, delta, sig0, pert, cex){
-  if (method == "URSS" | method == "ACO"){
+graficos_controle <- function(data, sl, k, method, snl, A, desc, delta, sig0, pert, cex, po){
+  if (method == "NRSS" | method == "RSS"){
     k2 <- k^2
-  } else if (method == "AAS"){
+  } else if (method == "SRS"){
     k2 <- k
-  } else {stop("A função suporta apenas os delineamentos URSS, ACO e AAS")}
+  } else {stop("A função suporta apenas os delineamentos NRSS, RSS e AAS")}
   
   samples <- data[sample(1:nrow(data), size = sl*k2, replace = TRUE), ]
-
+  
   # nova média do processo, caso entre em descontrole
   mu <- (delta*sig0)/sqrt(k)
   
-  if (method == "URSS"){
+  if (method == "NRSS"){
     # Faz todo o processo de ordenação e seleção de amostra
-    amostras <- urss_process(samples, sl, k2)
+    amostras <- urss_process(samples, sl, k2, po)
     amostras_mean <- rowMeans(amostras)
     # Linha Central
     mean_mean <- mean(amostras)
@@ -288,18 +255,18 @@ graficos_controle <- function(data, sl, k, method, snl, A, desc, delta, sig0, pe
       data$concrete <- data$concrete + rnorm(nrow(data), mu, sd = pert)
       newdata <- data[sample(1:nrow(data), size = snl*k2, replace = TRUE), ]  # Desloca a média do processo com a pertubação
       # Amostra URSS
-      amostras_new <- urss_process(newdata, snl, k2)
+      amostras_new <- urss_process(newdata, snl, k2, po)
       mean_amostras_new <- rowMeans(amostras_new)  
     }
     else{ # Sob controle
       newdata <- data[sample(1:nrow(data), size = snl*k2, replace = TRUE), ] 
       # Amostra URSS
-      amostras_new <- urss_process(newdata, snl, k2)
+      amostras_new <- urss_process(newdata, snl, k2, po)
       mean_amostras_new <- rowMeans(amostras_new)
     }
   } 
-  else if (method == "ACO"){
-    amostras <- aco_process(samples, sl, k)
+  else if (method == "RSS"){
+    amostras <- aco_process(samples, sl, k, po)
     amostras_mean <- rowMeans(amostras)
     # Linha Central
     mean_mean <- mean(amostras)
@@ -324,14 +291,14 @@ graficos_controle <- function(data, sl, k, method, snl, A, desc, delta, sig0, pe
       data$concrete <- data$concrete + rnorm(nrow(data), mean = mu, sd = pert)
       newdata <- data[sample(1:nrow(data), size = snl*k2, replace = TRUE), ]
       # Amostra ACO
-      amostras_new <- aco_process(newdata, snl, k)
+      amostras_new <- aco_process(newdata, snl, k, po)
       mean_amostras_new <- rowMeans(amostras_new)
     }
     else { # Sob controle
       # Coletando novas amostras do processo sem descontrole
       newdata <- data[sample(1:nrow(data), size = snl*k2, replace = TRUE), ]
       # Amostra ACO
-      amostras_new <- aco_process(newdata, snl, k)
+      amostras_new <- aco_process(newdata, snl, k, po)
       mean_amostras_new <- rowMeans(amostras_new)
     }
     
@@ -375,110 +342,110 @@ graficos_controle <- function(data, sl, k, method, snl, A, desc, delta, sig0, pe
       # Amostra AAS
       mean_amostras_new <- rowMeans(amostras_new) }}
   data_ploting <- as.data.frame(c(amostras_mean,mean_amostras_new))
-  data_ploting$color <- ifelse(as.numeric(data_ploting<lic | data_ploting>lsc),"red",
-                               ifelse(as.numeric(data_ploting<lic2 | data_ploting>lsc2),"gold","blue"))
-  if(method=="AAS"){
-    print(var_mean)
-  }else{
-    print(A*sqrt(var_mean))
-  }
-  plot_grafico(k, delta, method, lc, lsc, lic, lsc1, lic1, lsc2, lic2, sl, data_ploting[,1],data_ploting[,2], cex)
-}
-# Inputs ####
-k2 <- 25
-sl <- 25
-k <- 5
-snl <- 75
-A <- 3
-desc <- T
-delta <- 1.2
-mu0 <- 35.8
-sig0 <- 16.7
-pert <- 2
-cex <- 2.6
-#c(bottom, left, top, right)
-#oma é o de fora, mai o de dentro
-par(mfrow=c(3,1), oma=c(5,1,2,2),mai=c(0.5,1,0.5,1))
-method <- c("AAS", "ACO", "URSS")
-for (i in 1:3){
-  graficos_controle(data = data, sl = sl, k = k, method = method[i],snl = snl, A = A, desc = desc, delta = delta, sig0 = sig0, pert = pert, cex = cex)
-  if(i == 2){
-    mtext("Resistência do concreto(MPa)",side=2,line=3, adj=1, cex = cex)
-  }else if (i == 3){
-    title(substitute(paste("Gráficos de controle para a média com k=",k," e ",delta,"=",delta_value)
-                     ,list(k = k, delta_value=delta))
-          ,outer=T,line=-1, cex.main=cex*1.5)
-    mtext("Amostras para estimar os LIC e LSC",side=1,line=3, adj=0, cex = cex/1.35)
-    mtext("Amostras para monitorar o processo",side=1,line=3, adj=1, cex = cex/1.35)
-    mtext("Identificação da amostra",side=1, line=5, cex = cex/1.25)
-  }
+  data_ploting$pch.forma <- ifelse(as.numeric(data_ploting<lic | data_ploting>lsc),8,
+                                   ifelse(as.numeric(data_ploting<lic2 | data_ploting>lsc2),1,16))
+  # if(method=="SRS"){
+  #   print(var_mean)
+  # }else{
+  #   print(A*sqrt(var_mean))
+  # }
+  plot_grafico(k, delta, method, lc, lsc, lic, lsc1, lic1, lsc2, lic2, sl, data_ploting[,1],"black", cex, data_ploting[,2], po)
+  # return(data_ploting) # Utilizado para plotar os dados do gráfico e fazer o teste
 }
 
-dados_ex <- as.data.frame(c(rnorm(25,sd=0.8),rnorm(75,1.5,sd=0.8)))
-lf <- mean(dados_ex[26:100,1])
-par(mfrow=c(1,1), mai=c(0.5,2,0.5,1))
-plot_grafico_2(lf,0, 3, -3, 1, -1, 2, -2, 25, dados_ex, 2)
-plot_grafico_2 <- function(lf,lc, lsc, lic, lsc1, lic1, lsc2, lic2, sl, dados, cex){
-  dados$color <- ifelse(as.numeric(dados[,1]<lic | dados[,1]>lsc),"red",
-                               ifelse(as.numeric(dados[,1]<lic2 | dados[,1]>lsc2),"gold","blue"))
-  plot(dados[,1]
-       , type ="b"
-       , col  = dados[,2]
-       , main =""
-       , xlab =""
-       , ylab = ""
-       , ylim = c(lic-1, lsc+1)
-       , las  = 1
-       , pch  = 16
-       , xaxt = "n"
-       , cex = cex
-       , cex.axis = cex/1.25
-       , yaxt = "n"
-  )
-  # Lado esquerdo
-  mtext(expression(mu[0] + frac(3*sigma[0],sqrt(k))), at = lsc, side = 2, las = 1, cex = cex/1.1, line = 2)
-  mtext(expression(mu[0] - frac(3*sigma[0],sqrt(k))), at = lic, side = 2, las = 1, cex = cex/1.1, line = 2)
-  mtext(expression(mu[0]), at = lc, side = 2, las = 1, cex = cex/1.1, line=2)
-  mtext(expression(mu[1]), at = lf, side = 2, las = 1, cex = cex/1.1, line=2)
-  abline(h=lf, lwd=2*cex)
-  
-  mtext("Amostras para estimar os LIC e LSC",side=1,line=3, adj=0, cex = cex/1.35)
-  mtext("Amostras para monitorar o processo",side=1,line=3, adj=1, cex = cex/1.35)
-  mtext("Identificação da amostra",side=1, line=5, cex = cex/1.25)
-  
-  # Axis
-  axis(1, at = seq(1, sl+75,2), cex.axis = cex/1.25)
-  #Divisão de amostras
-  abline(v=sl, lty = "dotted")
-  ## Cima
-  #LSC
-  abline(h=lsc, col = "red", lty="longdash", lwd = cex*1.25)
-  mtext("LSC", at=lsc, side=4,line=0.2, adj=0, las=1, cex = cex/1.1)
-  #2sigma
-  abline(h=lsc2, col = "black", lty ="dashed", lwd = cex)
-  mtext(substitute(paste(2, sigma[bar(Y)[method]])
-                   , list(method = method))
-        , at=lsc2, side=4,line=0.2, adj=0, las=1, cex = cex/1.25)
-  #1sigma
-  abline(h=lsc1, col = "grey", lty ="twodash", lwd = 1.75)
-  mtext(substitute(paste(1, sigma[bar(Y)[method]])
-                   , list(method = method))
-        , at=lsc1, side=4,line=0.2, adj=0, las=1, ann=F, cex = cex/1.25)
-  #Central
-  abline(h=lc)
-  mtext("LC", at=lc, side=4,line=0.2, adj=0, las=1, cex = cex/1.1)
-  ## Baixo
-  #LIC
-  abline(h=lic, col = "red", lty="longdash", lwd = cex*1.25)
-  mtext("LIC", at=lic, side=4,line=0.2, adj=0, las=1, outer=F, cex = cex/1.1)
-  #2sigma
-  abline(h=lic2, col = "black", lty ="dashed", lwd = cex)
-  mtext(substitute(paste(2, sigma[bar(Y)[method]])
-                   , list(method=method))
-        , at=lic2, side=4,line=0.2, adj=0, las=1, cex = cex/1.25)
-  #1sigma
-  abline(h=lic1, col = "grey", lty ="twodash", lwd = 1.75)
-  mtext(substitute(paste(1, sigma[bar(Y)[method]])
-                   , list(method=method))
-        , at=lic1, side=4,line=0.2, adj=0, las=1, cex = cex/1.25)
+
+# COLOCANDO ORDENAÇÃO PERFEITA
+
+### sqrt
+#3k3delta0   -> j = 4
+#5k5delta0   -> j = 4
+#3k3delta1.2 -> j = 17  
+#5k5delta1.2 -> j = 7
+
+# Inputs ####
+k2 <- 25       ## Tamanho da amostra inicial de um delineamento que fazem uso de ranqueamento
+k <- 5         ## Tamanho da amostra final
+sl <- 25       ## Amostras utilizadas para calcular os limites de controle
+snl <- 75      ## Amostras que não serão utilizadas para calcular o lic e lsc
+A <- 3         ## Amplitude
+desc <- T      ## Descontrole
+delta <- 1.2   ## Delta de Descontrole
+mu0 <- 5.81    ## Média mu0
+sig0 <- 1.45   ## Sigma sob controle
+pert <- 0.17   ## Pertubação nos dados
+cex <- 1.8     ## Tamanho da fonte
+# po <- T        ## Ordenção perfeita
+
+counter <- 0
+
+
+for(j in 7:7){
+  setEPS()
+  postscript(paste0("k",k,"d1.2j",j,"_sqrt",".eps"),width=16, height = 15)
+  par(mfrow=c(5,1), oma=c(5,0.5,2,0.5),mai=c(0.4,1,0.15,1))
+  method <- c("SRS", "RSS", "NRSS")
+  for (i in 1:3){
+    # counter <- counter + 1
+    if (method[i] == "SRS"){
+      RNGkind(sample.kind = "Rounding")
+      set.seed(j)
+      graficos_controle(data = data, sl = sl, k = k, method = method[i],snl = snl, po = F,
+                        A = A, desc = desc, delta = delta, sig0 = sig0, pert = pert, cex = cex)
+    } else{
+      RNGkind(sample.kind = "Rounding")
+      set.seed(j)
+      graficos_controle(data = data, sl = sl, k = k, method = method[i],snl = snl, po = T, 
+                        A = A, desc = desc, delta = delta, sig0 = sig0, pert = pert, cex = cex)
+      RNGkind(sample.kind = "Rounding")
+      set.seed(j)
+      graficos_controle(data = data, sl = sl, k = k, method = method[i],snl = snl, po = F,
+                        A = A, desc = desc, delta = delta, sig0 = sig0, pert = pert, cex = cex)
+    }
+    if(i == 2){ # Trick
+      mtext(expression(sqrt("Concrete strength (MPa)")),side=2,line=3, adj=1, cex = cex/1.25)
+    }
+      
+    # print(counter)
+  }
+  mtext("Samples to estimate LCL and UCL",side=1,line=3, adj=0, cex = cex/1.25)
+  mtext("Samples to monitorate the process",side=1,line=3, adj=1, cex = cex/1.25)
+  mtext("Samples order",side=1, line=5, cex = cex/1.25)
+  dev.off()
 }
+
+
+# Sementes Utilizadas:
+
+#3k3delta0   -> j = 5
+#5k5delta0   -> j = 3
+#3k3delta1.2 -> j = 5468
+#5k5delta1.2 -> j = 5466
+
+# Determinig the pattern of the chart for imperfect ordering
+
+# # Testes
+# for(j in 1:200){
+#   method <- c("RSS")
+#     set.seed(j)
+#     a <- graficos_controle(data = data, sl = sl, k = k, method = method,snl = snl, A = A, desc = desc, delta = delta, sig0 = sig0, pert = pert, cex = cex, po = T)
+#     if (j==1){
+#       a1 <- a
+#     } else{
+#       a1 <- rbind(a1, a)
+#     }
+# }
+# nrow(a1)
+# srs <- a1
+# rss <- a1
+# nrss <- a1
+# delin.k3 <- list(srs, rss, nrss)
+# lapply(delin.k3, function(x) nrow(x[x$pch.forma==8, ]))
+# 
+# srs <- a1
+# rss <- a1
+# nrss <- a1
+# delin.k5 <- list(srs, rss, nrss)
+# rf <- cbind(do.call(rbind.data.frame, lapply(delin.k3, function(x) nrow(x[x$pch.forma==8, ]))),
+# do.call(rbind.data.frame, lapply(delin.k5, function(x) nrow(x[x$pch.forma==8, ]))))
+# names(rf) <- c("k=3","k=5")
+# rownames(rf) <- c("srs","rss","nrss")
