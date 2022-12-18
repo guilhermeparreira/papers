@@ -1,0 +1,141 @@
+---
+title: "TMB Multivariate"
+author: '[Guilherme Parreira da Silva](http://lattes.cnpq.br/7353800201695627)'
+date: "`r format( Sys.Date(), '%d/%m/%Y' ) `"
+lang: pt-BR
+output:
+  html_document:
+    css: /home/guilherme/Google Drive/Analises/Modelo/markdown7.css
+    fig_caption: yes
+    number_sections: yes
+    theme: default
+    toc: yes
+    toc_depth: 4
+bibliography: /home/guilherme/Google Drive/Analises/Modelo/referencias.bib
+csl: /home/guilherme/Google Drive/Analises/Modelo/stilo_biblio.csl
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+opts_chunk$set(
+    tidy = FALSE, 
+    results = "markup", # hold
+    # fig.path = "graficos_inferencia/",
+    dpi = 100,
+    fig.align = "center",
+    fig.show = "asis", # hold
+    comment = NA,
+    warning = FALSE,
+    cache = TRUE,
+    echo = TRUE,
+    message = FALSE)
+options(width = 1000)
+#Opção global de chunck
+options(scipen = 4, digits = 5) # Isso fala que, o inline terão 5 dígitos e não será
+options(table_counter = TRUE, width = 10000)
+options(figure_counter = TRUE, width = 10000)
+```
+
+
+```{r bugs1, echo=FALSE, results="asis"}
+# Function to print cpp files
+external_file <- function(file){
+  tf <- tempfile(fileext = ".html")
+  system(sprintf(paste0("/usr/local/bin/pygmentize -o %s ", file, ".cpp"), tf))
+  cat(readLines(tf), sep="\n")
+  unlink(tf)
+}
+# https://gitlab.oceantrack.org/otn-statistical-modelling-group/otn_tmb_workshop_2014
+# https://members.oceantrack.org/meetings/otn-modelling-and-visualization-workshop/
+```
+
+```{r, include=FALSE}
+library(TMB)
+setwd("~/Google Drive/Mestrado/dissertacao/TMB/MultivariateModels")
+Data set 1: Australian health survey
+Nadm
+```
+
+
+## Bivariate Couting data
+
+```{r}
+dados <- read.table("/home/guilherme/Dropbox/MCIF/Livro/dadosBeta.txt")
+head(dados, 8)
+```
+
+```{r, results='asis'}
+model <- "mglmm_counting" #1st try
+external_file(model)
+```
+
+```{r, results='hide'}
+model <- "mglmm_counting" #1st try
+compile(paste0(model, ".cpp"),flags="-O0 -g",DLLFLAGS="",libtmb=FALSE)
+
+compile(paste0(model, ".cpp"),"-O0 -g")
+dyn.load(dynlib(model))
+```
+
+```{r}
+counts <- c(18,17,15,20,10,20,25,13,12)
+outcome <- gl(3,1,9)
+treatment <- gl(3,3)
+print(d.AD <- data.frame(treatment, outcome, counts))
+set.seed(190)
+d.AD$counts2 <- d.AD$counts + rpois(nrow(d.AD), 3)
+
+# glm.D93 <- glm(counts ~ outcome + treatment, family = poisson(), data = d.AD)
+# anova(glm.D93)
+# summary(glm.D93)
+# glm.D93 <- glm(counts2 ~ outcome + treatment, family = poisson(), data = d.AD)
+# anova(glm.D93)
+# summary(glm.D93)
+
+```
+
+```{r}
+Rinterface(paste0(model, ".cpp"))
+n <- nrow(d.AD)
+data <- list(Y = as.matrix(d.AD[, 3:4]),
+             X = model.matrix(~ outcome + treatment, d.AD))
+params <- list(Beta1 = rep(0, 5),
+               Beta2 = rep(0, 5)
+               ,U = matrix(0, nrow = n, ncol = 2),
+               sigmas = c(1, 1),
+               rho = .3
+               )
+obj <- MakeADFun(data = data, 
+                 parameters = params,
+                 DLL = model,
+                 method = "BFGS",
+                 hessian = T,
+                 silent = F
+                 ,random = c("U")
+                 )
+opt <- do.call("optim", obj)
+rep <- sdreport(obj)
+summary(rep, "fixed", p.value = T)
+print(obj$report())
+```
+
+
+```{r, fig.height=12, fig.width=8}
+par(mfrow=c(3,2))
+prof_b0 <- TMB::tmbprofile(obj, 1, trace = F)
+prof_b1 <- TMB::tmbprofile(obj, 2, trace = F)
+prof_si <- TMB::tmbprofile(obj, "sigma_I", trace = F)
+prof_ss <- TMB::tmbprofile(obj, "sigma_S", trace = F)
+prof_rho <- TMB::tmbprofile(obj, "rho", parm.range = c(-1, 12), trace = F)
+prof_phi <- TMB::tmbprofile(obj, "phi", trace = F)
+
+plot(prof_b0)
+plot(prof_b1)
+plot(prof_si)
+plot(prof_ss)
+plot(prof_rho)
+plot(prof_phi)
+par(mfrow=c(1,1))
+```
