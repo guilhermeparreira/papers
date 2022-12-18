@@ -1,0 +1,43 @@
+# HOW TO USE THE CODE
+
+## ToyExample 
+This folder contains a toy and 'fast' example on how to use the MGLMM.
+
+Choose your dataset (Ant_Data runs faster) and go to the *Poisson*.R code and run it. Then go to *Negbin*.R and lastly for *Comp*.R (Comp for COM-Poisson). Be careful, COM-Poisson can take several hours or don't run if your machine has memory < 16Gb.	
+I used as input values for the parameters the old results from my models. That's way the .RData files.
+The files {02_poisson_multivariate, compoisson_multi, negbin_multivariate}.cpp are the template TMB files. 
+
+## CODE_AS_IT_IS
+
+This folder is the same content used to generate results to the paper. There are a lot of files. Inside of '~/Code_As_It_is' there some template files and some .cpp files that I used. Go straight to '~/Code_As_It_is/Servidor' ('servidor' means server). Inside, there are other .cpp files and you don't need care about it right now (but you can just look how to write a .cpp for a specific model for example). Then, go to '~/Code_As_It_is/Servidor/{Ant_Data, AHS_DATA}'. The folder 'Full' means the fully parametrized model. The folder 'SmallerModels' means models with correlation set to 0, common variance and so on. The way to run is the same logical as the toy example: 1º *Poisson*.R; 2º *Negbin*.R; 3º *Comp8.R. Some codes are commented and you may need to uncomment it and run. I will give general details of the code:
+
+1) Specially COM-Poisson is time consuming. That's way I had to separate the code in several files and had to use copy and paste a lot.
+2) `sv()` and `sv_sd()` functions are used to organize the output from `TMB` package. The first one does not generate SE, and the second does.
+3) The logical sequence of running is the same as shown in the paper.
+4) Sometimes I wrote comments in portuguese, as it is my mother language.
+5) `unify_packages.R` contains auxiliary functions
+
+### FOR AHS DATA:
+6) Variable selection and some graphics in the paper was made in the code `FinalModel.R` for full models.
+7) `summary_AHS.R` shows the goodness-of-fit table
+8) `extraindo_coeffs_AHS.R` I used for graphs.
+9) The folders {EnviarPataxo, EnviarComumVar_Pataxo, EnviarVarFixed_Pataxo} contains the code when I sent the model to the server that has larger processing power.
+
+### FOR ANT DATA
+
+10) `read_data_2.R` shows the goodness-of-fit table
+11) `extraindo_coeffs_ANT.R` I used for graphs and variable selection.
+
+In the folder Smaller Models shows simpler versions of Full model:
+
+1) {Compoisson,Negbin}_{nu,phi}_fixed_XX -> means parameter dispersion fixed with the specified XX value
+2) {Compoisson Negbin}_var_comum -> means common variance value to all variance parameters
+3) {Compoisson, negbin}_var_fixed -> Means variance parameter fixed to a constant value
+4) {Compoisson, Negbin, Poisson} ->  Means rho fixed at 0 -> independent responses
+
+Some models were necessary to separate between sample and dataset due to memory issues.
+
+A common error is error c stack usage is too close to the limit. In this case, you can increase c stack usage memory or use config(tape.parallel = FALSE, model  = model) to finish the estimation process.
+
+## DESCRIPTIVE_ANALYSIS
+The folder Descriptive_Analysis contains the dataset and descriptive analysis used in the article.
